@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  gp-flux:
+    image: anq12/gp-flux
+    env_file:
+     - ./gp-flux.env
+    volumes:
+      - type: bind
+        source: ./certificates
+        target: /opt/gp-flux/certificates
+    build: .
+    privileged: true

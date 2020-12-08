@@ -1,0 +1,7 @@
+ftp://speedtest.tele2.net/1MB.zip
+ftp://speedtest.tele2.net/3MB.zip
+ftp://speedtest.tele2.net/50MB.zip
+ftp://distro.ibiblio.org/pub/linux/distributions/damnsmall/release_candidate/dsl-4.11.rc1.iso
+ftp://distro.ibiblio.org/pub/linux/distributions/damnsmall/release_candidate/dsl-4.11.rc1.iso.md5.txt
+ftp://distro.ibiblio.org/pub/linux/distributions/damnsmall/release_candidate/dsl-4.11.rc2-syslinux.iso.md5.txt
+ftp://distro.ibiblio.org/pub/linux/distributions/damnsmall/release_candidate/dsl-4.11.rc2.iso.md5.txt
