@@ -112,6 +112,7 @@ sleep 5
 OPERSTATE=$(ifconfig tun0 | grep "UP,")
 if [ -z "$OPERSTATE" ]; then
         echo "Interface tun0 is DOWN. Exiting script"
+		echo "Did you remember to use --privileged?"
 		exit 1
 else
         echo "Interface tun0 is UP. Proceeding"

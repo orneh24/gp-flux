@@ -2,13 +2,15 @@
 Openconnect GlobalProtect client traffic generator
 
 Example, client certificate/key in C:\docker\certificates
-docker run -it --privileged --mount type=bind,source="C:\docker\certificates",target=/opt/gp-flux/certificates -e GP_USERNAME=CHANGE-ME -e GP_GATEWAY=CHANGE-ME -e GP_PASSWORD=CHANGE-ME anq12:gp-flux
+docker run -it --privileged --mount type=bind,source="C:\docker\certificates",target=/opt/gp-flux/certificates -e GP_USERNAME=CHANGE-ME -e GP_GATEWAY=CHANGE-ME -e GP_PASSWORD=CHANGE-ME anq12/gp-flux
 
 Example, no client certificate
-docker run -it --privileged -e GP_USERNAME=CHANGE-ME -e GP_GATEWAY=CHANGE-ME -e GP_PASSWORD=CHANGE-ME anq12:gp-flux
+docker run -it --privileged -e GP_USERNAME=CHANGE-ME -e GP_GATEWAY=CHANGE-ME -e GP_PASSWORD=CHANGE-ME anq12/gp-flux
 
-Container is designed to connect directly to GP Gateway. GP Portal -> Gateway is only supported if they use the same FQDN.
-
+Notes / Requirements:
+- Container is designed to connect directly to GP Gateway. GP Portal -> Gateway is only supported if they use the same FQDN.
+- Only certificate-based 2FA is supported
+- Multi-gateway selection is not supported
 
 Default actions:
 Bittorrent (transmission-daemon) - 100KB/s up/down limit - 200 max peers
