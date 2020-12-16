@@ -194,7 +194,7 @@ if [ "$IFTOP" = "true" ]; then
 		echo "Starting webcrawl in background, iftop -i tun0 in foreground"
 		echo "Timeout value $TIMEOUT"
 		sleep 4
-		nohup python3 noisy/noisy.py --config config.json --timeout $TIMEOUT &
+		nohup python3 scripts/noisy/noisy.py --config scripts/noisy/config.json --timeout $TIMEOUT &
 		iftop -i tun0 -P
 		echo "Timeout reached. Killing VPN"
 		pkill -f openconnect
@@ -202,7 +202,7 @@ if [ "$IFTOP" = "true" ]; then
 else
 		echo "Starting webcrawl in foreground. Timeout value $TIMEOUT"
 		sleep 1
-		python3 noisy/noisy.py --config noisy/config.json --timeout $TIMEOUT
+		python3 scripts/noisy/noisy.py --config scripts/noisy/config.json --timeout $TIMEOUT
 		echo "Timeout reached. Killing VPN"
 		pkill -f openconnect
 		sleep 1

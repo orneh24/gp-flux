@@ -57,7 +57,6 @@ RUN apt update && apt install -y \
 && apt clean
 
 COPY start.sh .
-COPY /noisy ./noisy/
 COPY /scripts ./scripts/
 COPY /certificates/ .
 COPY /transmission-daemon/watch downloads/bittorrent-transmission-watch
@@ -66,7 +65,7 @@ RUN chmod +x start.sh
 RUN chmod -R +x scripts/
 
 # Install Python prerequisites
-RUN pip3 install -r noisy/requirements.txt
+RUN pip3 install -r scripts/noisy/requirements.txt
 
 #ENTRYPOINT ["bash"]
 CMD ["bash", "./start.sh"]
