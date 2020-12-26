@@ -22,6 +22,11 @@ echo ""
 [[ ! -z "$timeout" ]] && TIMEOUT=$timeout
 [[ ! -z "$minimal" ]] && MINIMAL=$minimal
 
+OPENCONNECT_LOG="logs/openconnect.log"
+OPENCONNECT_ERROR_AUTHFAIL=": auth-failed"
+OPENCONNECT_ERROR_CLIENTCERTIFICATE="Valid client certificate is required"
+OPENCONNECT_ERROR_PRIVILEGED="Failed to bind local tun device (TUNSETIFF): Operation not permitted"
+
 if [ "$MINIMAL" = "true" ]; then
 		NMAP="false"
 		SMTP="false"
@@ -38,7 +43,6 @@ fi
 
 # Check if HIP report should be used
 if [ "$HIPREPORT" = "true" ]; then
-		echo "Preparing HIP report script"
 		HIPREPORT="--csd-wrapper scripts/hipreport.sh"
 		sleep 1
 else
@@ -79,6 +83,7 @@ echo "GP Portal: $GP_GATEWAY"
 fi
 
 echo $GP_PASSWORD > gp_password.txt
+
 # If BAD_CERT var is true, try to input cert manually
 if [ "$BADCERT" = "true" ]; then
 FILENAME=${2:-${HOST%%.*}}
@@ -101,18 +106,27 @@ openssl enc -base64 < "${PUBKEY_SHA256}" > "${PUBKEY_PIN256}"
 GP_CERT=$( cat "${PUBKEY_PIN256}" )
 
 echo "Certificate untrusted. Trying to connect..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --servercert pin-sha256:$GP_CERT --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT
+openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --servercert pin-sha256:$GP_CERT --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
 else
 echo "Connecting..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT
+openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
 echo ""
 fi
 
 sleep 5
 OPERSTATE=$(ifconfig tun0 | grep "UP,")
 if [ -z "$OPERSTATE" ]; then
-        echo "Interface tun0 is DOWN. Exiting script"
-		echo "Did you remember to use --privileged?"
+        echo "Interface tun0 is DOWN. Checking for known errors"
+		if grep -q "$OPENCONNECT_ERROR_AUTHFAIL" "$OPENCONNECT_LOG"; then
+         echo "Authentication failed, verify user credentials"
+        fi
+		if grep -q "$OPENCONNECT_ERROR_CLIENTCERTIFICATE" "$OPENCONNECT_LOG"; then
+         echo "Machine certificate missing"
+        fi
+		if grep -q "$OPENCONNECT_ERROR_PRIVILEGED" "$OPENCONNECT_LOG"; then
+         echo "Could not create tun0 device. Did you remember to use --privileged in docker run command?"
+        fi		
+		echo "Exiting container"
 		exit 1
 else
         echo "Interface tun0 is UP. Proceeding"
@@ -122,7 +136,7 @@ fi
 if [ "$NMAP" = "true" ]; then
 		NAMESERVER="$(egrep -o -m 1 '[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}' /etc/resolv.conf)"
 		echo "Starting nmap to nameserver $NAMESERVER"
-		nohup nmap -v -A $NAMESERVER 1> logs/nmap_nameserver_stdout.log 2> logs/nmap_nameserver_stderr.log &
+		nohup nmap -v -A $NAMESERVER &> logs/nmap_nameserver &
 else
 		echo "Skipping nmap nameserver"
 		sleep 1
@@ -132,7 +146,7 @@ fi
 echo ""
 if [ "$SMTP" = "true" ]; then
 		echo "Starting wget/smtp in background"
-		nohup ./scripts/wget_swaks.sh 1> logs/wget_swaks_stdout.log 2> logs/wget_swaks_stderr.log &
+		nohup ./scripts/wget_swaks.sh &> logs/wget_swaks &
 		sleep 1
 else
 		echo "Skipping wget/SMTP"
@@ -142,7 +156,7 @@ fi
 echo ""
 if [ "$WGET_SYSLOG" = "true" ]; then
 		echo "Starting wget/syslog in background"
-		nohup ./scripts/wget_syslog.sh 1> logs/wget_syslog_stdout.log 2> logs/wget_syslog_stderr.log &
+		nohup ./scripts/wget_syslog.sh &> logs/wget_syslog.log &
 		sleep 1
 else
 		echo "Skipping wget/syslog"
@@ -152,7 +166,7 @@ fi
 echo ""
 if [ "$WGET_FTP" = "true" ]; then
 		echo "Starting wget/FTP download in background"
-		nohup ./scripts/wget_ftp.sh 1> logs/wget_ftp_stdout.log 2> logs/wget_ftp_stderr.log &
+		nohup ./scripts/wget_ftp.sh &> logs/wget_ftp.log &
 		sleep 1
 else
 		echo "Skipping wget/FTP"
@@ -162,7 +176,7 @@ fi
 echo ""
 if [ "$CURL_PANDB_URL" = "true" ]; then
 		echo "Starting PAN-DB URL Filtering category curl"
-		nohup ./scripts/curl_pandb_url.sh 1> logs/curl_pandb_url_stdout.log 2> logs/curl_pandb_url_stderr.log &
+		nohup ./scripts/curl_pandb_url.sh &> logs/curl_pandb_url.log &
 		sleep 1
 else
 		echo "Skipping PAN-DB curl"
@@ -175,7 +189,7 @@ if [ -z "$NMAP_TARGET" ]; then
 		sleep 1
 else
 		echo "nmap_target specified. Starting nmap scan"
-		nohup nmap -v -A $NMAP_TARGET 1> logs/nmap_target_stdout.log 2> logs/nmap_target_stderr.log &
+		nohup nmap -v -A $NMAP_TARGET &> logs/nmap_target.log &
 		sleep 1
 fi
 

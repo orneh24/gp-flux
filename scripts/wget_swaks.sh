@@ -23,7 +23,7 @@ fi
 echo ""
 if [ "$WGET_SMTP" = "true" ]; then
 echo "Downloading files.."
-wget --limit-rate 300k -nv -i scripts/wget_examples-files.txt -P downloads/wget_swaks/
+wget --limit-rate 100k -nv -i scripts/wget_examples-files.txt -P downloads/wget_swaks/
 fi
 
 echo ""
