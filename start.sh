@@ -105,10 +105,10 @@ echo "Set Python Request to use local cert store"
 export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 echo "Certificate untrusted. Trying to connect..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=certificates/docker_machine_cert.crt --sslkey=certificates/docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
+openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
 else
 echo "Connecting..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=certificates/docker_machine_cert.crt --sslkey=certificates/docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
+openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
 echo ""
 fi
 
