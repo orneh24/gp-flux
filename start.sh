@@ -22,6 +22,7 @@ echo ""
 [[ ! -z "$timeout" ]] && TIMEOUT=$timeout
 [[ ! -z "$minimal" ]] && MINIMAL=$minimal
 
+
 OPENCONNECT_LOG="logs/openconnect.log"
 OPENCONNECT_ERROR_AUTHFAIL=": auth-failed"
 OPENCONNECT_ERROR_CLIENTCERTIFICATE="Valid client certificate is required"
@@ -75,41 +76,39 @@ else
 echo "Password filled out"
 fi
 if [ "$GP_GATEWAY" = "CHANGE_ME" ]; then
-echo "Portal missing"
+echo "Gateway missing"
 echo "Enter GlobalProtect Gateway and press [ENTER]"
 read GP_GATEWAY
 else
-echo "GP Portal: $GP_GATEWAY"
+echo "GP Gateway: $GP_GATEWAY"
 fi
 
 echo $GP_PASSWORD > gp_password.txt
 
-# If BAD_CERT var is true, try to input cert manually
+# Split Gateway hostname and port in different vars
+HOST="$(echo $GP_GATEWAY | cut -d: -f1)"
+PORT="$(echo $GP_GATEWAY | cut -d: -f2 -s)"
+if [ -z "$PORT" ]; then
+echo "No port specified, we wil try :443"
+                PORT=443
+                sleep 1
+fi
+
 if [ "$BADCERT" = "true" ]; then
-FILENAME=${2:-${HOST%%.*}}
-HOST=$GP_GATEWAY
-echo "Trying to fetch untrusted certificate"
-# For file naming, see https://support.ssl.com/Knowledgebase/Article/View/19/0/der-vs-crt-vs-cer-vs-pem-certificates-and-how-to-convert-them
-# For HTTP Public Key Pinning (HPKP), see https://developer.mozilla.org/en-US/docs/Web/HTTP/Public_Key_Pinning
-CERTIFICATE_PEM="${FILENAME}_certificate.ascii.crt"
-CERTIFICATE_DER="${FILENAME}_certificate.crt"
-PUBKEY_PEM="${FILENAME}_pubkey.ascii.key"
-PUBKEY_DER="${FILENAME}_pubkey.key"
-PUBKEY_SHA256="${FILENAME}_pubkey.sha256"
-PUBKEY_PIN256="${FILENAME}_pubkey.ascii.pin256"
-echo "Q" | openssl s_client -connect "${HOST}":443 -servername "${HOST}" 2>/dev/null | openssl x509 -outform pem > "${CERTIFICATE_PEM}"
-openssl x509 -outform der < "${CERTIFICATE_PEM}" > "${CERTIFICATE_DER}"
-openssl x509 -pubkey -noout < "${CERTIFICATE_PEM}"> "${PUBKEY_PEM}"
-openssl pkey -pubin -outform der < "${PUBKEY_PEM}" > "${PUBKEY_DER}"
-openssl dgst -sha256 -binary < "${PUBKEY_DER}" > "${PUBKEY_SHA256}"
-openssl enc -base64 < "${PUBKEY_SHA256}" > "${PUBKEY_PIN256}"
-GP_CERT=$( cat "${PUBKEY_PIN256}" )
+# Get all certs in chain, from GW
+openssl s_client -showcerts -verify 5 -connect ${HOST}:${PORT} < /dev/null | awk '/BEGIN/,/END/{ if(/BEGIN/){a++}; out="cert"a".crt"; print >out}'
+# Re-run CA update. should be optimized
+echo "Updating CA certificates*"
+cp *.crt /usr/local/share/ca-certificates/ 2>/dev/null
+chmod 644 /usr/local/share/ca-certificates/* 2>/dev/null && update-ca-certificates 2>/dev/null
+echo "Set Python Request to use local cert store"
+export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 echo "Certificate untrusted. Trying to connect..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --servercert pin-sha256:$GP_CERT --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
+openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=certificates/docker_machine_cert.crt --sslkey=certificates/docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
 else
 echo "Connecting..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
+openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=certificates/docker_machine_cert.crt --sslkey=certificates/docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
 echo ""
 fi
 

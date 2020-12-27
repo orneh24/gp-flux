@@ -34,6 +34,10 @@ Default actions:
 - wget EICAR test malware files
 - SMTP dummy files - swaks/smtpbucket
 
+Troubleshooting:
+- It's DNS.
+- It's always DNS.
+
 Examples:
 Single instance using docker run
 ![gp-flux-run](demo/gp-flux-run-example.gif)
@@ -44,5 +48,5 @@ Multiple instances using docker-compose
 ACC report ordered by sessions, 5 containers, running for two hours (DNS removed)
 ![gp-flux-run](demo/gp-flux-acc-5clients-2hr.png)
 
-ACC report, same as above, but DNS/web-browsing/SSL/Bittorrent removed, to show scope of applications
+ACC report, same as above, but DNS/web-browsing/SSL/Bittorrent removed, to show scope of applications recognized
 ![gp-flux-run](demo/gp-flux-acc-5clients-2hrs-minorapps.png)
