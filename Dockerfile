@@ -1,5 +1,5 @@
 #Download base image ubuntu 20.04
-FROM ubuntu:20.04
+FROM ubuntu:groovy
 
 # Disable Prompt During Packages Installation
 ARG DEBIAN_FRONTEND=noninteractive
@@ -8,7 +8,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Replace values with username, password and FQDN of GP Portal
 ENV GP_USERNAME="CHANGE_ME"
 ENV GP_PASSWORD="CHANGE_ME"
-ENV GP_GATEWAY="CHANGE_ME"
+ENV GP_HOST="CHANGE_ME"
 #ENV GP_MACHINECERT=docker_machine_cert.crt
 #ENV GP_MACHINECERTKEY=docker_machine_cert.key
 ENV MINIMAL="false"
@@ -25,12 +25,12 @@ ENV CURL_PANDB_URL="true"
 ENV EICAR_FILES="true"
 ENV TIMEOUT="3600"
 ENV IFTOP="false"
-ENV BADCERT="true"
-ENV MINIMAL="false"
+ENV GET_GP_CERTS="true"
 
 WORKDIR /opt/gp-flux
 
 RUN mkdir logs
+RUN mkdir certificates-gp
 RUN mkdir downloads
 RUN mkdir downloads/bittorrent-transmission
 RUN mkdir downloads/bittorrent-transmission-incomplete

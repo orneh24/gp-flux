@@ -7,8 +7,7 @@ echo ""
 [[ ! -z "$user" ]] && GP_USERNAME=$user
 [[ ! -z "$gp_password" ]] && GP_PASSWORD=$gp_password
 [[ ! -z "$pass" ]] && GP_PASSWORD=$pass
-[[ ! -z "$gp_gateway" ]] && GP_GATEWAY=$gp_gateway
-[[ ! -z "$gateway" ]] && GP_GATEWAY=$gateway
+[[ ! -z "$gp_host" ]] && GP_HOST=$gp_host
 [[ ! -z "$nameserver" ]] && NAMESERVER=$nameserver
 [[ ! -z "$nmap_target" ]] && NMAP_TARGET=$nmap_target
 [[ ! -z "$smtp" ]] && SMTP=$smtp
@@ -18,7 +17,7 @@ echo ""
 [[ ! -z "$wget_smtp" ]] && WGET_SMTP=$wget_smtp
 [[ ! -z "$curl_pandb_url" ]] && CURL_PANDB_URL=$curl_pandb_url
 [[ ! -z "$hipreport" ]] && HIPREPORT=$hipreport
-[[ ! -z "$badcert" ]] && BADCERT=$badcert
+[[ ! -z "$get_gp_certs" ]] && GET_GP_CERTS=$get_gp_certs
 [[ ! -z "$timeout" ]] && TIMEOUT=$timeout
 [[ ! -z "$minimal" ]] && MINIMAL=$minimal
 
@@ -27,6 +26,8 @@ OPENCONNECT_LOG="logs/openconnect.log"
 OPENCONNECT_ERROR_AUTHFAIL=": auth-failed"
 OPENCONNECT_ERROR_CLIENTCERTIFICATE="Valid client certificate is required"
 OPENCONNECT_ERROR_PRIVILEGED="Failed to bind local tun device (TUNSETIFF): Operation not permitted"
+OPENCONNECT_ERROR_MULTIPLEGATEWAYS="[2-9] gateway servers available:"
+OPENCONNECT_ERROR_DNSRESOLUTION="getaddrinfo failed for host"
 
 if [ "$MINIMAL" = "true" ]; then
 		NMAP="false"
@@ -51,16 +52,6 @@ else
 		HIPREPORT=""
 fi
 
-echo "Updating CA certificates*"
-cp certificates/*.crt /usr/local/share/ca-certificates/ 2>/dev/null
-cp certificates/*.cert /usr/local/share/ca-certificates/ 2>/dev/null
-chmod 644 /usr/local/share/ca-certificates/* 2>/dev/null && update-ca-certificates 2>/dev/null
-echo "Set Python Request to use local cert store"
-export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-echo "Checking for local certificates (docker_machine_cert.crt/.key)"
-cp --force certificates/docker_machine_cert.crt . 2>/dev/null
-cp --force certificates/docker_machine_cert.key . 2>/dev/null
-
 if [ "$GP_USERNAME" = "CHANGE_ME" ]; then
 echo "Username missing"
 echo "Enter username and press [ENTER]"
@@ -75,61 +66,73 @@ read -s GP_PASSWORD
 else
 echo "Password filled out"
 fi
-if [ "$GP_GATEWAY" = "CHANGE_ME" ]; then
-echo "Gateway missing"
-echo "Enter GlobalProtect Gateway and press [ENTER]"
-read GP_GATEWAY
+if [ "$GP_HOST" = "CHANGE_ME" ]; then
+echo "GP host missing"
+echo "Enter GlobalProtect Portal/Gateway and press [ENTER]"
+read GP_HOST
 else
-echo "GP Gateway: $GP_GATEWAY"
+echo "GP host: $GP_HOST"
 fi
 
 echo $GP_PASSWORD > gp_password.txt
 
-# Split Gateway hostname and port in different vars
-HOST="$(echo $GP_GATEWAY | cut -d: -f1)"
-PORT="$(echo $GP_GATEWAY | cut -d: -f2 -s)"
+# Split GP server hostname and port in different vars
+HOST="$(echo $GP_HOST | cut -d: -f1)"
+PORT="$(echo $GP_HOST | cut -d: -f2 -s)"
 if [ -z "$PORT" ]; then
 echo "No port specified, we wil try :443"
                 PORT=443
                 sleep 1
 fi
 
-if [ "$BADCERT" = "true" ]; then
-# Get all certs in chain, from GW
-openssl s_client -showcerts -verify 5 -connect ${HOST}:${PORT} < /dev/null | awk '/BEGIN/,/END/{ if(/BEGIN/){a++}; out="cert"a".crt"; print >out}'
-# Re-run CA update. should be optimized
+cp --force certificates/docker_machine_cert.crt . 2>/dev/null
+cp --force certificates/docker_machine_cert.key . 2>/dev/null
+if [ "$GET_GP_CERTS" = "true" ]; then
+# Get all certs in chain, from GP Host
+openssl s_client -showcerts -verify 5 -connect ${HOST}:${PORT} < /dev/null | awk '/BEGIN/,/END/{ if(/BEGIN/){a++}; out="certificates-gp/cert"a".crt"; print >out}'
+cp certificates-gp/*.crt /usr/local/share/ca-certificates/ 2>/dev/null
+fi
 echo "Updating CA certificates*"
-cp *.crt /usr/local/share/ca-certificates/ 2>/dev/null
+cp certificates/*.crt /usr/local/share/ca-certificates/ 2>/dev/null
+cp certificates/*.cert /usr/local/share/ca-certificates/ 2>/dev/null
 chmod 644 /usr/local/share/ca-certificates/* 2>/dev/null && update-ca-certificates 2>/dev/null
-echo "Set Python Request to use local cert store"
+# Set Python Request to use local cert store
 export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
-echo "Certificate untrusted. Trying to connect..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
-else
 echo "Connecting..."
-openconnect --background --protocol=gp $GP_GATEWAY --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
-echo ""
+openconnect --background --protocol=gp $GP_HOST --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
+
+sleep 2
+OPERSTATE=$(ifconfig tun0 | grep "UP,")
+if [ -z "$OPERSTATE" ]; then
+		if grep -Eq "$OPENCONNECT_ERROR_MULTIPLEGATEWAYS" "$OPENCONNECT_LOG"; then
+         echo "Multiple gateways detected. Will retry using first gateway on list"
+		 awk '/gateway servers available:/{getline; print}' logs/openconnect.log | awk -F"[()]" '{print $2}' > gp_host_retry.txt
+		 paste -d '\n' gp_password.txt gp_host_retry.txt > gp_stdin_merge.txt
+		 openconnect --background --protocol=gp $GP_HOST --user=$GP_USERNAME --passwd-on-stdin < gp_stdin_merge.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
+		fi
 fi
 
-sleep 5
+sleep 2
 OPERSTATE=$(ifconfig tun0 | grep "UP,")
 if [ -z "$OPERSTATE" ]; then
         echo "Interface tun0 is DOWN. Checking for known errors"
 		if grep -q "$OPENCONNECT_ERROR_AUTHFAIL" "$OPENCONNECT_LOG"; then
          echo "Authentication failed, verify user credentials"
         fi
+		if grep -q "$OPENCONNECT_ERROR_DNSRESOLUTION" "$OPENCONNECT_LOG"; then
+         echo "Could not resolve host. Check DNS"
+        fi
 		if grep -q "$OPENCONNECT_ERROR_CLIENTCERTIFICATE" "$OPENCONNECT_LOG"; then
          echo "Machine certificate missing"
         fi
 		if grep -q "$OPENCONNECT_ERROR_PRIVILEGED" "$OPENCONNECT_LOG"; then
          echo "Could not create tun0 device. Did you remember to use --privileged in docker run command?"
-        fi		
+        fi
 		echo "Exiting container"
 		exit 1
 else
         echo "Interface tun0 is UP. Proceeding"
-
 fi
 
 if [ "$NMAP" = "true" ]; then
