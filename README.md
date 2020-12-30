@@ -18,10 +18,10 @@ docker-compose up -d --scale gp-flux=10
 
 Notes / Requirements:
 - Container can connect via GP Portal or directly to GP Gateway
-- X-Auth is _not_ required on gateway - Openconnect will emulate GP client
-- Decryption of traffic is supported if CA cert is installed (see certificates/Certificate Instructions.txt)
-- 2FA/MFA is not supported
 - If multiple gateways are available from a portal, the first on the list will be used
+- Decryption of traffic is supported if CA cert is installed (see certificates/Certificate Instructions.txt)
+- X-Auth is _not_ required on gateway - Openconnect will emulate GP client
+- 2FA/MFA might work from interactive mode, but won't be included or tested
 
 Default actions:
 - Bittorrent (transmission-daemon) - 100KB/s up/down limit - 200 max peers. Torrent files are from academictorrents.com

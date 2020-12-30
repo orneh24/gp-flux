@@ -28,6 +28,7 @@ OPENCONNECT_ERROR_CLIENTCERTIFICATE="Valid client certificate is required"
 OPENCONNECT_ERROR_PRIVILEGED="Failed to bind local tun device (TUNSETIFF): Operation not permitted"
 OPENCONNECT_ERROR_MULTIPLEGATEWAYS="[2-9] gateway servers available:"
 OPENCONNECT_ERROR_DNSRESOLUTION="getaddrinfo failed for host"
+OPENCONNECT_ERROR_CERTIFICATEHOSTNAME="Reason: certificate does not match hostname"
 
 if [ "$MINIMAL" = "true" ]; then
 		NMAP="false"
@@ -80,7 +81,7 @@ echo $GP_PASSWORD > gp_password.txt
 HOST="$(echo $GP_HOST | cut -d: -f1)"
 PORT="$(echo $GP_HOST | cut -d: -f2 -s)"
 if [ -z "$PORT" ]; then
-echo "No port specified, we wil try :443"
+#echo "No port specified, we wil try :443"
                 PORT=443
                 sleep 1
 fi
@@ -102,9 +103,16 @@ export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 echo "Connecting..."
 openconnect --background --protocol=gp $GP_HOST --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
 
+# Stage 1 of tunnel checks
 sleep 2
 OPERSTATE=$(ifconfig tun0 | grep "UP,")
 if [ -z "$OPERSTATE" ]; then
+		if grep -Eq "$OPENCONNECT_ERROR_CERTIFICATEHOSTNAME" "$OPENCONNECT_LOG"; then
+         echo "Mismatch in GP certificate hostnames. It's always DNS"
+		 echo "yes" >>gp_password.txt
+		 echo "Will try to add certificates temp accept in STDIN"
+		 openconnect --background --protocol=gp $GP_HOST --user=$GP_USERNAME --passwd-on-stdin < gp_password.txt --certificate=docker_machine_cert.crt --sslkey=docker_machine_cert.key $HIPREPORT --verbose &> logs/openconnect.log
+		fi
 		if grep -Eq "$OPENCONNECT_ERROR_MULTIPLEGATEWAYS" "$OPENCONNECT_LOG"; then
          echo "Multiple gateways detected. Will retry using first gateway on list"
 		 awk '/gateway servers available:/{getline; print}' logs/openconnect.log | awk -F"[()]" '{print $2}' > gp_host_retry.txt
@@ -113,6 +121,7 @@ if [ -z "$OPERSTATE" ]; then
 		fi
 fi
 
+#Stage 2 of tunnel checks
 sleep 2
 OPERSTATE=$(ifconfig tun0 | grep "UP,")
 if [ -z "$OPERSTATE" ]; then
