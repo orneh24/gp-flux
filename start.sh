@@ -1,7 +1,5 @@
 #! /bin/bash
 echo "[INFO] starting script..."
-echo ""
-
 # Check for variable spelling, case-sensitive and variants
 [[ ! -z "$gp_username" ]] && GP_USERNAME=$gp_username
 [[ ! -z "$user" ]] && GP_USERNAME=$user
@@ -40,8 +38,6 @@ if [ "$MINIMAL" = "true" ]; then
 		CURL_PANDB_URL="false"
 		BITTORRENT="false"
 		echo "[INFO] Minimal ENV true, skipping all non-HTTP"
-else
-		echo ""
 fi
 
 # Check if HIP report should be used
@@ -162,7 +158,6 @@ else
 fi
 
 
-echo ""
 if [ "$SMTP" = "true" ]; then
 		echo "[INFO] Starting wget/smtp in background"
 		nohup ./scripts/wget_swaks.sh &> logs/wget_swaks &
@@ -172,7 +167,6 @@ else
 		sleep 1
 fi
 
-echo ""
 if [ "$WGET_SYSLOG" = "true" ]; then
 		echo "[INFO] Starting wget/syslog in background"
 		nohup ./scripts/wget_syslog.sh &> logs/wget_syslog.log &
@@ -182,7 +176,6 @@ else
 		sleep 1
 fi
 
-echo ""
 if [ "$WGET_FTP" = "true" ]; then
 		echo "[INFO] Starting wget/FTP download in background"
 		nohup ./scripts/wget_ftp.sh &> logs/wget_ftp.log &
@@ -192,7 +185,6 @@ else
 		sleep 1
 fi
 
-echo ""
 if [ "$CURL_PANDB_URL" = "true" ]; then
 		echo "[INFO] Starting PAN-DB URL Filtering category curl"
 		nohup ./scripts/curl_pandb_url.sh &> logs/curl_pandb_url.log &
@@ -202,7 +194,6 @@ else
 		sleep 1
 fi
 
-echo ""
 if [ -z "$NMAP_TARGET" ]; then
 		echo "[INFO] No nmap_target set. Skipping nmap scan"
 		sleep 1
@@ -212,7 +203,6 @@ else
 		sleep 1
 fi
 
-echo ""
 if [ "$BITTORRENT" = "true" ]; then
 		echo "[INFO] Starting bittorrent client"
 		transmission-daemon --config-dir transmission-daemon/ --logfile logs/transmission-daemon.log
@@ -222,7 +212,6 @@ else
 		sleep 1
 fi
 
-echo ""
 if [ "$IFTOP" = "true" ]; then
 		echo "[INFO] Starting webcrawl in background, iftop -i tun0 in foreground"
 		echo "[INFO] Timeout value $TIMEOUT"
