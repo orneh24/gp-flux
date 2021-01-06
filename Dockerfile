@@ -26,8 +26,10 @@ ENV EICAR_FILES="true"
 ENV TIMEOUT="3600"
 ENV IFTOP="false"
 ENV GET_GP_CERTS="true"
+ENV USERLIST="false"
 
 WORKDIR /opt/gp-flux
+
 
 RUN mkdir logs
 RUN mkdir certificates-gp
@@ -54,7 +56,7 @@ RUN apt update && apt install -y \
   nmap\
   iftop\
   swaks\
-&& apt clean
+  && apt clean
 
 COPY start.sh .
 COPY /scripts ./scripts/

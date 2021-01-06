@@ -9,5 +9,8 @@ services:
       - type: bind
         source: ./certificates
         target: /opt/gp-flux/certificates
+      - type: bind
+        source: ./docker-compose
+        target: /opt/gp-flux/compose     
     build: .
     privileged: true

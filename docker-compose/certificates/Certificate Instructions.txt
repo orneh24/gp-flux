@@ -1,0 +1,13 @@
+CA Certificates:
+All certificates placed in the folder, will be added to the Trusted CA store. This also enables decrypting traffic on firewall.
+
+Machine Certificates:
+To use a Machine Certificate for GP authentication, replace the existing docker_machine_cert.crt and docker_machine_cert.key files.
+Certificates and Private Key files must be Base64 encoded, and be named docker_machine_cert.crt and docker_machine_cert.key.
+
+User Certificates:
+Not yet supported
+
+GP Portal/GW Certificates:
+If GP certificate is untrusted for whatever reason, it will try to grab the certificate and add it to the Container's trusted CA store.
+This can also manually be enabled, by setting Environmental Variable 'BADCERT' to "true".

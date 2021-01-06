@@ -19,6 +19,11 @@ echo "[INFO] starting script..."
 [[ ! -z "$timeout" ]] && TIMEOUT=$timeout
 [[ ! -z "$minimal" ]] && MINIMAL=$minimal
 
+if [ "$USERLIST" = "true" ]; then
+CREDENTIAL=$(shuf -n 1 compose/userlist.csv)
+GP_USERNAME=$(echo $CREDENTIAL | grep -m 1 -Eo [^,]+ | head -n 1)
+GP_PASSWORD=$(echo $CREDENTIAL | grep -m 1 -Eo [^,]+ | tail -n 1)
+fi
 
 OPENCONNECT_LOG="logs/openconnect.log"
 OPENCONNECT_ERROR_AUTHFAIL=": auth-failed"
@@ -54,21 +59,21 @@ echo "[WARN] Username missing"
 echo "Enter username and press [ENTER]"
 read GP_USERNAME
 else
-echo "Username: $GP_USERNAME"
+echo "[INFO] Username: $GP_USERNAME"
 fi
 if [ "$GP_PASSWORD" = "CHANGE_ME" ]; then
 echo "[WARN] Password missing"
 echo "Enter password and press [ENTER]"
 read -s GP_PASSWORD
 else
-echo "Password filled out"
+echo "[INFO] Password filled out"
 fi
 if [ "$GP_HOST" = "CHANGE_ME" ]; then
 echo "[WARN] GP host missing"
 echo "Enter GlobalProtect Portal/Gateway and press [ENTER]"
 read GP_HOST
 else
-echo "GP host: $GP_HOST"
+echo "[INFO] GP host: $GP_HOST"
 fi
 
 echo $GP_PASSWORD > gp_password.txt
@@ -84,6 +89,7 @@ fi
 
 cp --force certificates/docker_machine_cert.crt . 2>/dev/null
 cp --force certificates/docker_machine_cert.key . 2>/dev/null
+
 if [ "$GET_GP_CERTS" = "true" ]; then
 # Get all certs in chain, from GP host, install as CA
 nohup openssl s_client -showcerts -verify 5 -connect ${HOST}:${PORT} < /dev/null | awk '/BEGIN/,/END/{ if(/BEGIN/){a++}; out="certificates-gp/cert"a".crt"; print >out}'
@@ -92,7 +98,7 @@ fi
 echo "[INFO] Updating CA certificates*"
 cp certificates/*.crt /usr/local/share/ca-certificates/ 2>/dev/null
 cp certificates/*.cert /usr/local/share/ca-certificates/ 2>/dev/null
-chmod 644 /usr/local/share/ca-certificates/* 2>/dev/null && update-ca-certificates 2>/dev/null
+chmod 644 /usr/local/share/ca-certificates/* 2>/dev/null && update-ca-certificates 2>/dev/null | sed 's/.*/[INFO] &/'
 # Set Python Request to use local cert store
 export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
@@ -108,7 +114,7 @@ if [ -z "$OPERSTATE" ]; then
 		 echo "yes" >>gp_stdin_merge.txt
 		fi
 		if grep -Eq "$OPENCONNECT_ERROR_MULTIPLEGATEWAYS" "$OPENCONNECT_LOG"; then
-         echo "Multiple gateways detected. Will retry using first gateway on list"
+         echo "[INFO] Multiple gateways detected. Will retry using first gateway on list"
 		 awk '/gateway servers available:/{getline; print}' logs/openconnect.log | awk -F"[()]" '{print $2}' >>gp_stdin_merge.txt
 		fi
 		if grep -Eq "$OPENCONNECT_ERROR_CERTIFICATE" "$OPENCONNECT_LOG"; then #Run check again, in case gateway cert is bad
@@ -125,18 +131,24 @@ fi
 sleep 2
 OPERSTATE=$(ifconfig tun0 | grep "UP,")
 if [ -z "$OPERSTATE" ]; then
-        echo "[WARN] Interface tun0 is DOWN. Checking for known errors"
+    echo "[WARN] Interface tun0 is DOWN. Checking for known errors"
 		if grep -q "$OPENCONNECT_ERROR_AUTHFAIL" "$OPENCONNECT_LOG"; then
          echo -e "\e[31m[ERROR] Authentication failed, verify user credentials\e[0m"
+		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
-		if grep -q "$OPENCONNECT_ERROR_DNSRESOLUTION" "$OPENCONNECT_LOG"; then
-         echo -e "\e[31m[ERROR] Could not resolve host. Check DNS\e[0m"
+         if grep -q "$OPENCONNECT_ERROR_DNSRESOLUTION" "$OPENCONNECT_LOG"; then
+         echo -e "\e[31m[ERROR] Could not resolve host. Check DNS"
+         cat "$OPENCONNECT_LOG" | grep "$OPENCONNECT_ERROR_DNSRESOLUTION"
+         echo -e "\e[0m"
+		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
 		if grep -q "$OPENCONNECT_ERROR_CLIENTCERTIFICATE" "$OPENCONNECT_LOG"; then
          echo -e "\e[31m[ERROR] Machine certificate missing\e[0m"
+		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
 		if grep -q "$OPENCONNECT_ERROR_PRIVILEGED" "$OPENCONNECT_LOG"; then
          echo -e "\e[31m[ERROR] Could not create tun0 device. Did you remember to use --privileged in docker run command?\e[0m"
+		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
 		echo -e "[INFO] Exiting container"
 		exit 1
@@ -195,7 +207,7 @@ else
 fi
 
 if [ -z "$NMAP_TARGET" ]; then
-		echo "[INFO] No nmap_target set. Skipping nmap scan"
+		#echo "[INFO] No nmap_target set. Skipping nmap scan"
 		sleep 1
 else
 		echo "[INFO] nmap_target specified. Starting nmap scan"
