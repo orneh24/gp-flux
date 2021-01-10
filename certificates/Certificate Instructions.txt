@@ -1,3 +1,7 @@
+To add certificates, the certificates folder must be mounted as a Docker bind volume;
+docker run -it --privileged --mount type=bind,source="C:\docker\certificates",target=/opt/gp-flux/certificates
+
+
 CA Certificates:
 All certificates placed in the folder, will be added to the Trusted CA store. This also enables decrypting traffic on firewall.
 

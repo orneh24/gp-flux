@@ -2,6 +2,7 @@
 echo "[INFO] starting script..."
 # Check for variable spelling, case-sensitive and variants
 [[ ! -z "$gp_username" ]] && GP_USERNAME=$gp_username
+[[ ! -z "$GP_USER" ]] && GP_USERNAME=$GP_USER
 [[ ! -z "$user" ]] && GP_USERNAME=$user
 [[ ! -z "$gp_password" ]] && GP_PASSWORD=$gp_password
 [[ ! -z "$pass" ]] && GP_PASSWORD=$pass
@@ -18,20 +19,36 @@ echo "[INFO] starting script..."
 [[ ! -z "$get_gp_certs" ]] && GET_GP_CERTS=$get_gp_certs
 [[ ! -z "$timeout" ]] && TIMEOUT=$timeout
 [[ ! -z "$minimal" ]] && MINIMAL=$minimal
+[[ ! -z "$userlist" ]] && USERLIST=$userlist
+[[ ! -z "$youtube_dl" ]] && YOUTUBE-DL=$youtube_dl
+
+COMPOSE_CERT_DIR="certificates-compose/"
+if [ -d "$COMPOSE_CERT_DIR" ]; then
+  echo "Using client certificates from docker-compose"
+  cp --force certificates-compose/docker_machine_cert.crt . 2>/dev/null
+  cp --force certificates-compose/docker_machine_cert.key . 2>/dev/null
+else
+  cp --force certificates/docker_machine_cert.crt . 2>/dev/null
+  cp --force certificates/docker_machine_cert.key . 2>/dev/null
+fi
+
+cp --force userlist/userlist.csv . 2>/dev/null
 
 if [ "$USERLIST" = "true" ]; then
-CREDENTIAL=$(shuf -n 1 compose/userlist.csv)
+echo "Using credentials from userlist.csv"
+CREDENTIAL=$(shuf -n 1 userlist.csv)
 GP_USERNAME=$(echo $CREDENTIAL | grep -m 1 -Eo [^,]+ | head -n 1)
 GP_PASSWORD=$(echo $CREDENTIAL | grep -m 1 -Eo [^,]+ | tail -n 1)
 fi
 
 OPENCONNECT_LOG="logs/openconnect.log"
-OPENCONNECT_ERROR_AUTHFAIL=": auth-failed"
+OPENCONNECT_ERROR_AUTHFAIL="(: auth-failed)|(Authentication failure)"
 OPENCONNECT_ERROR_CLIENTCERTIFICATE="Valid client certificate is required"
 OPENCONNECT_ERROR_PRIVILEGED="Failed to bind local tun device (TUNSETIFF): Operation not permitted"
 OPENCONNECT_ERROR_MULTIPLEGATEWAYS="[2-9] gateway servers available:"
 OPENCONNECT_ERROR_DNSRESOLUTION="getaddrinfo failed for host"
 OPENCONNECT_ERROR_CERTIFICATE="Enter 'yes' to accept"
+OPENCONNECT_ERROR_TLSFATALALERT="A TLS fatal alert has been received"
 
 if [ "$MINIMAL" = "true" ]; then
 		NMAP="false"
@@ -42,6 +59,7 @@ if [ "$MINIMAL" = "true" ]; then
 		WGET_SYSLOG="false"
 		CURL_PANDB_URL="false"
 		BITTORRENT="false"
+		YOUTUBE_DL="false"
 		echo "[INFO] Minimal ENV true, skipping all non-HTTP"
 fi
 
@@ -82,13 +100,9 @@ echo $GP_PASSWORD > gp_password.txt
 HOST="$(echo $GP_HOST | cut -d: -f1)"
 PORT="$(echo $GP_HOST | cut -d: -f2 -s)"
 if [ -z "$PORT" ]; then
-#echo "No port specified, we wil try :443"
                 PORT=443
                 sleep 1
 fi
-
-cp --force certificates/docker_machine_cert.crt . 2>/dev/null
-cp --force certificates/docker_machine_cert.key . 2>/dev/null
 
 if [ "$GET_GP_CERTS" = "true" ]; then
 # Get all certs in chain, from GP host, install as CA
@@ -132,26 +146,25 @@ sleep 2
 OPERSTATE=$(ifconfig tun0 | grep "UP,")
 if [ -z "$OPERSTATE" ]; then
     echo "[WARN] Interface tun0 is DOWN. Checking for known errors"
-		if grep -q "$OPENCONNECT_ERROR_AUTHFAIL" "$OPENCONNECT_LOG"; then
+		if grep -Eq "$OPENCONNECT_ERROR_AUTHFAIL" "$OPENCONNECT_LOG"; then
          echo -e "\e[31m[ERROR] Authentication failed, verify user credentials\e[0m"
-		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
          if grep -q "$OPENCONNECT_ERROR_DNSRESOLUTION" "$OPENCONNECT_LOG"; then
          echo -e "\e[31m[ERROR] Could not resolve host. Check DNS"
          cat "$OPENCONNECT_LOG" | grep "$OPENCONNECT_ERROR_DNSRESOLUTION"
-         echo -e "\e[0m"
-		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
 		if grep -q "$OPENCONNECT_ERROR_CLIENTCERTIFICATE" "$OPENCONNECT_LOG"; then
          echo -e "\e[31m[ERROR] Machine certificate missing\e[0m"
-		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
+		if grep -q "$OPENCONNECT_ERROR_TLSFATALALERT" "$OPENCONNECT_LOG"; then
+         echo -e "\e[31m[ERROR] Error in TLS stream. Possibly client certificate issue	\e[0m"
+        fi		
 		if grep -q "$OPENCONNECT_ERROR_PRIVILEGED" "$OPENCONNECT_LOG"; then
          echo -e "\e[31m[ERROR] Could not create tun0 device. Did you remember to use --privileged in docker run command?\e[0m"
-		 echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"
         fi
-		echo -e "[INFO] Exiting container"
-		exit 1
+	echo -e "\e[96m" && tail --verbose -n 10 logs/openconnect.log | sed 's/.*/[DEBUG] &/' && echo -e "\e[0m"		
+	echo -e "[INFO] Exiting container"
+	exit 1
 else
         echo "[INFO] Interface tun0 is UP. Proceeding"
 fi
@@ -172,7 +185,7 @@ fi
 
 if [ "$SMTP" = "true" ]; then
 		echo "[INFO] Starting wget/smtp in background"
-		nohup ./scripts/wget_swaks.sh &> logs/wget_swaks &
+		nohup ./scripts/wget_swaks.sh &> logs/wget_swaks.log &
 		sleep 1
 else
 		echo "[INFO] Skipping wget/SMTP"
@@ -197,6 +210,15 @@ else
 		sleep 1
 fi
 
+if [ "$YOUTUBE_DL" = "true" ]; then
+		echo "[INFO] Starting youtube-dl in background"
+		nohup ./scripts/youtube-dl.sh &> logs/youtube-dl.log &
+		sleep 1
+else
+		echo "[INFO] Skipping youtube-dl"
+		sleep 1
+fi
+
 if [ "$CURL_PANDB_URL" = "true" ]; then
 		echo "[INFO] Starting PAN-DB URL Filtering category curl"
 		nohup ./scripts/curl_pandb_url.sh &> logs/curl_pandb_url.log &
@@ -207,7 +229,6 @@ else
 fi
 
 if [ -z "$NMAP_TARGET" ]; then
-		#echo "[INFO] No nmap_target set. Skipping nmap scan"
 		sleep 1
 else
 		echo "[INFO] nmap_target specified. Starting nmap scan"

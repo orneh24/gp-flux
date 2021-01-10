@@ -17,6 +17,7 @@ ENV BITTORRENT="true"
 ENV WGET_FTP="true"
 ENV WGET_SMTP="true"
 ENV WGET_SYSLOG="true"
+ENV YOUTUBE_DL="true"
 ENV SMTP="true"
 ENV SMTP_SERVER="mail.smtpbucket.com:8025"
 ENV NMAP="true"
@@ -30,7 +31,7 @@ ENV USERLIST="false"
 
 WORKDIR /opt/gp-flux
 
-
+RUN mkdir userlist
 RUN mkdir logs
 RUN mkdir certificates-gp
 RUN mkdir downloads
@@ -57,10 +58,13 @@ RUN apt update && apt install -y \
   iftop\
   swaks\
   && apt clean
+  
+RUN wget https://yt-dl.org/downloads/latest/youtube-dl -O /usr/local/bin/youtube-dl
+RUN chmod a+rx /usr/local/bin/youtube-dl
 
+COPY certificates ./certificates/
 COPY start.sh .
 COPY /scripts ./scripts/
-COPY /certificates/ .
 COPY /transmission-daemon/watch downloads/bittorrent-transmission-watch
 COPY /transmission-daemon/settings.json transmission-daemon/settings.json
 RUN chmod +x start.sh

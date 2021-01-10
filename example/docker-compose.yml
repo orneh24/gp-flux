@@ -8,9 +8,9 @@ services:
     volumes:
       - type: bind
         source: ./certificates
-        target: /opt/gp-flux/certificates
+        target: /opt/gp-flux/certificates-compose
       - type: bind
-        source: ./docker-compose
-        target: /opt/gp-flux/compose     
-    build: .
+        source: ./userlist
+        target: /opt/gp-flux/userlist
+    build: ../
     privileged: true

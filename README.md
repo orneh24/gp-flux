@@ -15,13 +15,16 @@ docker run -it --privileged --mount type=bind,source="C:\docker\certificates",ta
 10 containers, using docker-compose (variables in gp-flux.env file)
 
 docker-compose up -d --scale gp-flux=10
+when done, use docker-compose down
 
 Notes / Requirements:
 - Container can connect via GP Portal or directly to GP Gateway
+- Self-signed / untrusted / internal CA-signed certificates _should_ all work 
 - If multiple gateways are available from a portal, the first on the list will be used
 - Decryption of traffic is supported if CA cert is installed (see certificates/Certificate Instructions.txt)
 - X-Auth is _not_ required on gateway - Openconnect will emulate GP client
-- 2FA/MFA might work from interactive mode, but won't be included or tested
+- Almost all actions can be switched on/off through ENV variables
+- If run with docker-compose, username/password can be randomly selected from a .csv. Replace userlist.csv in example/ directory and set variable USERLIST to "true"
 
 Default actions:
 - Bittorrent (transmission-daemon) - 100KB/s up/down limit - 200 max peers. Torrent files are from academictorrents.com
@@ -31,6 +34,7 @@ Default actions:
 - wget Bacon Ipsum, syslog result to 8.8.8.8
 - wget FTP - 200KB/s limit
 - wget EICAR test malware files
+- youtube-dl a few files - 200 KB/s limit
 - SMTP dummy files - swaks/smtpbucket
 
 Troubleshooting:
@@ -47,5 +51,5 @@ Multiple instances using docker-compose
 ACC report ordered by sessions, 5 containers, running for two hours (DNS removed)
 ![gp-flux-run](demo/gp-flux-acc-5clients-2hr.png)
 
-ACC report, same as above, but DNS/web-browsing/SSL/Bittorrent removed, to show scope of applications recognized
+ACC report, same as above, but DNS/web-browsing/SSL/Bittorrent removed, to show more of the App-ID signatures recognized
 ![gp-flux-run](demo/gp-flux-acc-5clients-2hrs-minorapps.png)
