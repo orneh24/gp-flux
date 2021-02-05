@@ -17,10 +17,12 @@ docker run -it --privileged --mount type=bind,source="C:\docker\certificates",ta
 docker-compose up -d --scale gp-flux=10
 when done, use docker-compose down
 
-Notes / Requirements:
+Notes / Requirements / Limitations:
 - Container can connect via GP Portal or directly to GP Gateway
 - Self-signed / untrusted / internal CA-signed certificates _should_ all work 
-- If multiple gateways are available from a portal, the first on the list will be used
+- If editing files, make sure they are saved in Unix LF format
+- If multiple gateways are available from a portal, the first on the list will be used. If gateway auto-selection fails, connect directly to gateway instead
+- Internal Host Detection is not supported
 - Decryption of traffic is supported if CA cert is installed (see certificates/Certificate Instructions.txt)
 - X-Auth is _not_ required on gateway - Openconnect will emulate GP client
 - Almost all actions can be switched on/off through ENV variables

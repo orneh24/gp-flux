@@ -1,7 +1,7 @@
 {
     "max_depth": 4,
     "min_sleep": 1,
-    "max_sleep": 5,
+    "max_sleep": 2,
     "timeout": false,
     "root_urls": [
 "http://google.com",
