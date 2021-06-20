@@ -22,6 +22,13 @@ echo "[INFO] starting script..."
 [[ ! -z "$userlist" ]] && USERLIST=$userlist
 [[ ! -z "$youtube_dl" ]] && YOUTUBE-DL=$youtube_dl
 
+if [ "$GP_DISABLED" = "true" ]; then
+echo "Bypassing GP..."
+./scripts/gp-disabled.sh
+exit
+fi
+
+
 COMPOSE_CERT_DIR="certificates-compose/"
 if [ -d "$COMPOSE_CERT_DIR" ]; then
   echo "Using client certificates from docker-compose"

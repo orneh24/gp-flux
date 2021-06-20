@@ -28,6 +28,7 @@ ENV TIMEOUT="3600"
 ENV IFTOP="false"
 ENV GET_GP_CERTS="true"
 ENV USERLIST="false"
+ENV GP_DISABLED="false"
 
 WORKDIR /opt/gp-flux
 
