@@ -1,6 +1,10 @@
 # gp-flux
-Openconnect GlobalProtect client traffic generator. This image is designed for simulating real user network traffic and performing stability/throughput testing. Container will default run for 1 hour, can be changed with variable TIMEOUT=seconds.
+Openconnect-, and Docker-based, GlobalProtect client traffic generator. This image is designed for simulating real user network traffic and performing stability/throughput testing. Container will default run for 1 hour, can be changed with variable TIMEOUT=seconds.
 Since the image uses Openconnect instead of the official GP software, a GlobalProtect Portal license is not required on firewall.
+
+[<img src="https://i.imgur.com/FbL1gTX.png">](https://notbyai.fyi/)
+[<img src="https://i.imgur.com/uQP26h1.png">](https://notbyai.fyi/)
+[<img src="https://i.imgur.com/1WaBp89.png">](https://notbyai.fyi/)
 
 Getting started;
 
