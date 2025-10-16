@@ -10,11 +10,11 @@ Getting started;
 
 Single container, no client certificate:
 
-docker run -it --privileged -e GP_USERNAME=CHANGE-ME -e GP_HOST=CHANGE-ME -e GP_PASSWORD=CHANGE-ME anq12/gp-flux
+docker run -it --privileged -e GP_USERNAME=CHANGE-ME -e GP_HOST=CHANGE-ME -e GP_PASSWORD=CHANGE-ME orneh24/gp-flux
 
 Single container, client certificate/key in C:\docker\certificates
 
-docker run -it --privileged --mount type=bind,source="C:\docker\certificates",target=/opt/gp-flux/certificates -e GP_USERNAME=CHANGE-ME -e GP_HOST=CHANGE-ME -e GP_PASSWORD=CHANGE-ME anq12/gp-flux
+docker run -it --privileged --mount type=bind,source="C:\docker\certificates",target=/opt/gp-flux/certificates -e GP_USERNAME=CHANGE-ME -e GP_HOST=CHANGE-ME -e GP_PASSWORD=CHANGE-ME orneh24/gp-flux
 
 10 containers, using docker-compose (variables in gp-flux.env file)
 
