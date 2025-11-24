@@ -3,8 +3,6 @@ Openconnect-, and Docker-based, GlobalProtect client traffic generator. This ima
 Since the image uses Openconnect instead of the official GP software, a GlobalProtect Portal license is not required on firewall.
 
 [<img src="https://i.imgur.com/FbL1gTX.png">](https://notbyai.fyi/)
-[<img src="https://i.imgur.com/uQP26h1.png">](https://notbyai.fyi/)
-[<img src="https://i.imgur.com/1WaBp89.png">](https://notbyai.fyi/)
 
 Getting started;
 
